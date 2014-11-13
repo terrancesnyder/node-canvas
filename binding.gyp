@@ -12,8 +12,7 @@
       'variables': {
         'with_jpeg%': '<!(./util/has_lib.sh jpeg)',
         'with_gif%': '<!(./util/has_lib.sh gif)',
-        # disable pango as it causes issues with freetype.
-        'with_pango%': 'false',
+        'with_pango%': 'true',
         'with_freetype%': '<!(./util/has_cairo_freetype.sh)'
       }
     }]
