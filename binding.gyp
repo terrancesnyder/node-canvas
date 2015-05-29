@@ -5,7 +5,7 @@
         'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
         'with_jpeg%': 'false',
         'with_gif%': 'false',
-        'with_pango%': 'false',
+        'with_pango%': 'true',
         'with_freetype%': 'false'
       }
     }, { # 'OS!="win"'
@@ -121,7 +121,7 @@
           'conditions': [
             ['OS=="win"', {
               'libraries': [
-                '-l<(GTK_Root)/lib/pangocairo.lib'
+                '-l<(GTK_Root)/lib/pangocairo-1.0.lib'
               ]
             }, { # 'OS!="win"'
               'include_dirs': [ # tried to pass through cflags but failed
