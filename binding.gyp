@@ -125,8 +125,8 @@
           'conditions': [
             ['OS=="win"', {
               'libraries': [
-                '-l<(GTK_Root)/lib/pangocairo-1.0.lib',
                 '-l<(GTK_Root)/lib/pango-1.0.lib',
+                '-l<(GTK_Root)/lib/pangocairo-1.0.lib',
                 '-l<(GTK_Root)/lib/glib-2.0.lib',
                 '-l<(GTK_Root)/lib/gobject-2.0.lib',
               ]
