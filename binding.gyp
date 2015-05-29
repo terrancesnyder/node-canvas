@@ -32,6 +32,10 @@
               '<(GTK_Root)/bin/libfreetype-6.dll',
               '<(GTK_Root)/bin/libpng14-14.dll',
               '<(GTK_Root)/bin/zlib1.dll',
+              '<(GTK_Root)/bin/libpango-1.0-0.dll',
+              '<(GTK_Root)/bin/libpangocairo-1.0-0.dll',
+              '<(GTK_Root)/bin/libglib-2.0-0.dll',
+              '<(GTK_Root)/bin/libgobject-2.0-0.dll'
             ]
           }]
         }]
@@ -121,7 +125,10 @@
           'conditions': [
             ['OS=="win"', {
               'libraries': [
-                '-l<(GTK_Root)/lib/pangocairo-1.0.lib'
+                '-l<(GTK_Root)/lib/pangocairo-1.0.lib',
+                '-l<(GTK_Root)/lib/pango-1.0.lib',
+                '-l<(GTK_Root)/lib/glib-2.0.lib',
+                '-l<(GTK_Root)/lib/gobject-2.0.lib',
               ]
             }, { # 'OS!="win"'
               'include_dirs': [ # tried to pass through cflags but failed
