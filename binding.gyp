@@ -5,7 +5,7 @@
         'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
         'with_jpeg%': 'false',
         'with_gif%': 'false',
-        'with_pango%': 'true',
+        'with_pango%': 'false',
         'with_freetype%': 'false'
       }
     }, { # 'OS!="win"'
