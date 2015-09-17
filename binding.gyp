@@ -5,7 +5,7 @@
         'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
         'with_jpeg%': 'false',
         'with_gif%': 'false',
-        'with_pango%': 'false',
+        'with_pango%': 'true',
         'with_freetype%': 'false'
       }
     }, { # 'OS!="win"'
@@ -33,6 +33,7 @@
               '<(GTK_Root)/bin/libpng14-14.dll',
               '<(GTK_Root)/bin/zlib1.dll',
               '<(GTK_Root)/bin/libpango-1.0-0.dll',
+              '<(GTK_Root)/bin/libpangowin32-1.0-0.dll',
               '<(GTK_Root)/bin/libpangocairo-1.0-0.dll',
               '<(GTK_Root)/bin/libglib-2.0-0.dll',
               '<(GTK_Root)/bin/libgobject-2.0-0.dll'
