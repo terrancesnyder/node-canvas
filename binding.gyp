@@ -59,10 +59,13 @@
         ['OS=="win"', {
           'libraries': [
             '-l<(GTK_Root)/lib/cairo.lib',
-            '-l<(GTK_Root)/lib/libpng.lib'
+            '-l<(GTK_Root)/lib/libpng.lib',
+            '-l<(GTK_Root)/lib/freetype.lib'
           ],
           'include_dirs': [
             '<(GTK_Root)/include',
+            '<(GTK_Root)/include/cairo',
+            '<(GTK_Root)/include/freetype2'
           ],
           'defines': [
             'snprintf=_snprintf',
