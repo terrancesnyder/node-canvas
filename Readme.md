@@ -308,6 +308,23 @@ Tested with and designed for:
 For node 0.2.x `node-canvas` <= 0.4.3 may be used,
 0.5.0 and above are designed for node 0.4.x only.
 
+## Windows Build
+
+- Extract GTK to C:\GTK
+- Extract FreeType to C:\freetype
+- Extract libjpeg-turn to C:\libjpeg-turbo
+- Install CMake 3.3.2
+
+### Build FreeType
+
+    > cd C:\freetype
+    > cmake . -G "Visual Studio 7"
+    > open VS solution
+    > change build to "release"
+    > build
+    > rename C:\freetype-2.6\release to C:\freetype-2.6\lib
+    > rename C:\freetype-2.6\include\freetype2 to C:\freetype-2.6\include\freetype
+
 ## License
 
 (The MIT License)
