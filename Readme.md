@@ -314,6 +314,7 @@ For node 0.2.x `node-canvas` <= 0.4.3 may be used,
 - Extract FreeType to C:\freetype
 - Extract libjpeg-turn to C:\libjpeg-turbo
 - Install CMake 3.3.2
+- npm install -g node-gyp
 
 ### Build FreeType
 
@@ -324,6 +325,7 @@ For node 0.2.x `node-canvas` <= 0.4.3 may be used,
     > build
     > rename C:\freetype-2.6\release to C:\freetype-2.6\lib
     > rename C:\freetype-2.6\include\freetype2 to C:\freetype-2.6\include\freetype
+    > renamce C:\GTK\include\freetype2 to C:\GTK\include\freetype
 
 ## License
 
