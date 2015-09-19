@@ -4,8 +4,8 @@
       'variables': {
         'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
         'JPEG_ROOT%': 'C:/libjpeg-turbo', # Set the location of LibJpeg Turbo
-		    'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
-		    'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
+        'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
+        'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
         'with_jpeg%': 'true',
         'with_gif%': 'false',
         'with_pango%': 'false',
@@ -32,7 +32,7 @@
               '<(GTK_Root)/bin/libcairo-2.dll',
               '<(GTK_Root)/bin/libexpat-1.dll',
               '<(GTK_Root)/bin/libfontconfig-1.dll',
-              '<(GTK_Root)/bin/libfreetype-6.dll',
+              '<(GTK_Root)/bin/freetype6.dll',
               '<(GTK_Root)/bin/libpng14-14.dll',
               '<(GTK_Root)/bin/zlib1.dll',
               '<(GTK_Root)/bin/libpango-1.0-0.dll',
@@ -67,7 +67,7 @@
           'include_dirs': [
             '<(GTK_Root)/include',
             '<(GTK_Root)/include/cairo',
-			'src/unistd' # needed for Freetype, GifLib, and Pango
+            'src/unistd'
           ],
           'defines': [
             'snprintf=_snprintf',
@@ -116,7 +116,7 @@
               'libraries': [
                 '-l<(FT_Root)/lib/freetype.lib'
               ],
-			  'include_dirs': [
+              'include_dirs': [
                 '<(FT_Root)/include',
                 '<(FT_Root)/include/freetype'
               ],
@@ -124,14 +124,24 @@
                 'Debug': {
                   'msvs_settings': {
                     'VCLinkerTool': {
-                      'IgnoreDefaultLibraryNames': ['libcmtd']
+                      'IgnoreDefaultLibraryNames': ['libc']
+                    },
+                    'VCCLCompilerTool': {
+                      'WarningLevel': 4,
+                      'ExceptionHandling': 1,
+                      'DisableSpecificWarnings': [4100, 4127, 4201, 4244, 4267, 4506, 4611, 4714, 4512]
                     }
                   }
                 },
                 'Release': {
                   'msvs_settings': {
                     'VCLinkerTool': {
-                      'IgnoreDefaultLibraryNames': ['libcmt']
+                      'IgnoreDefaultLibraryNames': ['libc']
+                    },
+                    'VCCLCompilerTool': {
+                      'WarningLevel': 4,
+                      'ExceptionHandling': 1,
+                      'DisableSpecificWarnings': [4100, 4127, 4201, 4244, 4267, 4506, 4611, 4714, 4512]
                     }
                   }
                 }
@@ -159,11 +169,11 @@
                 '-l<(GTK_Root)/lib/glib-2.0.lib',
                 '-l<(GTK_Root)/lib/gobject-2.0.lib',
               ],
-			  'include_dirs': [
+              'include_dirs': [
                 '<(GTK_Root)/include/glib-2.0',
                 '<(GTK_Root)/lib/glib-2.0/include',
                 '<(GTK_Root)/include/pango-1.0',
-			  ]
+              ]
             }, { # 'OS!="win"'
               'include_dirs': [ # tried to pass through cflags but failed
                 '<!@(pkg-config pangocairo --cflags-only-I | sed s/-I//g)'
@@ -208,7 +218,7 @@
                 '<(GIF_Root)/lib/quantize.c',
                 '<(GIF_Root)/lib/gifalloc.c'
               ],
-		      'include_dirs': ["<(GIF_Root)/lib"]
+          'include_dirs': ["<(GIF_Root)/lib"]
             }, {
               'libraries': [
                 '-lgif'
