@@ -4,13 +4,12 @@
       'variables': {
         'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
         'JPEG_ROOT%': 'C:/libjpeg-turbo', # Set the location of LibJpeg Turbo
-		'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
-		# NOTE: Freetype2 when built and installed by CMake, creates the include directory like: linclude/freetype2. You need to rename freetype2 to freetype.
-		'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
+		    'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
+		    'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
         'with_jpeg%': 'true',
         'with_gif%': 'false',
-        'with_pango%': 'true',
-        'with_freetype%': 'false'
+        'with_pango%': 'false',
+        'with_freetype%': 'true'
       }
     }, { # 'OS!="win"'
       'variables': {
