@@ -7,9 +7,9 @@
 		'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
 		# NOTE: Freetype2 when built and installed by CMake, creates the include directory like: linclude/freetype2. You need to rename freetype2 to freetype.
 		'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
-        'with_jpeg%': 'false',
+        'with_jpeg%': 'true',
         'with_gif%': 'false',
-        'with_pango%': 'false',
+        'with_pango%': 'true',
         'with_freetype%': 'false'
       }
     }, { # 'OS!="win"'
