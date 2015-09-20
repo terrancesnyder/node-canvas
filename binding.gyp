@@ -2,11 +2,10 @@
   'conditions': [
     ['OS=="win"', {
       'variables': {
-        'GTK_Root%': 'C:/GTK', # Set the location of GTK all-in-one bundle
-        'JPEG_ROOT%': 'C:/libjpeg-turbo', # Set the location of LibJpeg Turbo
-		'GIF_Root': 'C:/giflib', # Set the location of GifLib source root
-		# NOTE: Freetype2 when built and installed by CMake, creates the include directory like: linclude/freetype2. You need to rename freetype2 to freetype.
-		'FT_Root': 'C:/freetype', # Points to Freetype root of CMake install directory
+        'GTK_Root%': 'C:/GTK',
+        'JPEG_ROOT%': 'C:/libjpeg-turbo',
+		    'GIF_Root': 'C:/giflib',
+		    'FT_Root': 'C:/freetype',
         'with_jpeg%': 'false',
         'with_gif%': 'false',
         'with_pango%': 'false',
@@ -16,7 +15,6 @@
       'variables': {
         'with_jpeg%': '<!(./util/has_lib.sh jpeg)',
         'with_gif%': '<!(./util/has_lib.sh gif)',
-        # disable pango as it causes issues with freetype.
         'with_pango%': '<!(./util/has_lib.sh pangocairo)',
         'with_freetype%': '<!(./util/has_cairo_freetype.sh)'
       }
@@ -64,11 +62,11 @@
           'include_dirs': [
             '<(GTK_Root)/include',
             '<(GTK_Root)/include/cairo',
-			'src/unistd' # needed for Freetype, GifLib, and Pango
+			      'src/unistd'
           ],
           'defines': [
             'snprintf=_snprintf',
-            '_USE_MATH_DEFINES' # for M_PI
+            '_USE_MATH_DEFINES'
           ],
           'configurations': {
             'Debug': {
@@ -154,12 +152,12 @@
                 '-l<(GTK_Root)/lib/pango-1.0.lib',
                 '-l<(GTK_Root)/lib/pangocairo-1.0.lib'
               ],
-			  'include_dirs': [
+              'include_dirs': [
                 '<(GTK_Root)/include/glib-2.0',
                 '<(GTK_Root)/lib/glib-2.0/include',
                 '<(GTK_Root)/include/pango-1.0',
-			  ]
-            }, { # 'OS!="win"'
+              ]
+             }, { # 'OS!="win"'
               'include_dirs': [ # tried to pass through cflags but failed
                 '<!@(pkg-config pangocairo --cflags-only-I | sed s/-I//g)'
               ],
