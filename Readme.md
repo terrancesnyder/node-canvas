@@ -33,6 +33,25 @@ or if you use MacPorts
 sudo port install pkgconfig libpng giflib freetype libpixman cairo
 ```
 
+## Windows Build
+
+- Extract GTK to C:\GTK
+- Extract FreeType to C:\freetype
+- Extract libjpeg-turn to C:\libjpeg-turbo
+- Install CMake 3.3.2
+- npm install -g node-gyp
+
+### Build FreeType
+
+    > cd C:\freetype
+    > cmake . -G "Visual Studio 7"
+    > open VS solution
+    > change build to "release"
+    > build
+    > rename C:\freetype-2.6\release to C:\freetype-2.6\lib
+    > rename C:\freetype-2.6\include\freetype2 to C:\freetype-2.6\include\freetype
+    > renamce C:\GTK\include\freetype2 to C:\GTK\include\freetype
+
 ## Screencasts
 
   - [Introduction](http://screenr.com/CTk)
