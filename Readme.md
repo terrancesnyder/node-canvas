@@ -50,7 +50,52 @@ sudo port install pkgconfig libpng giflib freetype libpixman cairo
     > build
     > rename C:\freetype-2.6\release to C:\freetype-2.6\lib
     > rename C:\freetype-2.6\include\freetype2 to C:\freetype-2.6\include\freetype
-    > renamce C:\GTK\include\freetype2 to C:\GTK\include\freetype
+    > rename C:\GTK\include\freetype2 to C:\GTK\include\freetype
+
+### Notes
+
+When using this, kerning and font support was horrible. Regardless of PANGO
+or FreeType. The best freetype provided was that we could get decent font measurements
+but once fonts had smaller sizes than say 15pt/px the antialias in windows was utter garbage.
+This issue could be tracked down to here http://lists.cairographics.org/archives/cairo/2006-January/005954.html 
+where...
+
+> But there's a general problem that text rendering antialiasing only
+> works fully correctly in Windows if you draw directly to a no-alpha
+> target surface with a mode of OVER and a solid color. Anything else,
+> Pango needs to extract a mask from the windows text and draw with that,
+> and then the Gamma correction that Windows text gets in the way
+> rather than helping.
+
+So to avoid this, we look to opentype.js which has a fantastic rendering of opentype fonts
+(TTF/OTF). With this in hand we can override the local canvas object with a custom fillText
+that uses open-type to do the actual render.
+
+The only drawback to this approach is that when using fabric.js or some other script
+that extends canvas to support more interactive text layout we lose centering and right aligned
+text.
+
+      // override filltext so we get best rendering of fonts via opentype
+      canvas.fillText = canvas.contextContainer.fillText = function(text, top, left) {
+        var f = FontParser.parseFont(canvas.contextContainer.font);
+        var path = global._fonts[f.family].getPath(text, top, left, f.size);
+        path.fill = canvas.contextContainer.fillStyle;
+        path.draw(canvas.contextContainer);
+      };
+
+For fabric, this means we had to hack in a fix for this...
+
+      // hack to work around text align not working
+      // on windows due to use of opentype as text rendering
+      // not canvas.fillText(...)
+      if (ctx.textAlign == 'center') {
+        var w = ctx.measureText(chars);
+        left = (left - (w.width/2));
+      } else if (ctx.textAlign == 'right') {
+        var w = ctx.measureText(chars);
+        left = (left - w.width);
+      }
+
 
 ## Screencasts
 
