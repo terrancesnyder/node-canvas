@@ -40,7 +40,8 @@
     "install": "node-gyp rebuild"
   },
   "dependencies": {
-    "nan": "^1.8.4"
+    "nan": "^1.8.4",
+    "opentype.js": "0.4.x"
   },
   "devDependencies": {
     "body-parser": "^1.13.3",
