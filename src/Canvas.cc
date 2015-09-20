@@ -12,8 +12,8 @@
 #include <string.h>
 #include <node_buffer.h>
 #include <node_version.h>
-#include <cairo/cairo-pdf.h>
-#include <cairo/cairo-svg.h>
+#include <cairo-pdf.h>
+#include <cairo-svg.h>
 #include "closure.h"
 
 #ifdef HAVE_JPEG
@@ -353,7 +353,7 @@ streamPNG(void *c, const uint8_t *data, unsigned len) {
   Local<Value> argv[3] = {
       NanNew(NanNull())
     , buf
-    , NanNew<Integer>(len) };
+    , NanNew<Number>(len) };
   NanMakeCallback(NanGetCurrentContext()->Global(), closure->fn, 3, argv);
   return CAIRO_STATUS_SUCCESS;
 }
@@ -401,7 +401,7 @@ NAN_METHOD(Canvas::StreamPNGSync) {
 
     if (!args[2]->StrictEquals(NanUndefined())) {
       if (args[2]->IsUint32()) {
-        filter = args[1]->Uint32Value();
+        filter = args[2]->Uint32Value();
       } else {
         return NanThrowTypeError("Invalid filter value.");
       }

@@ -8,6 +8,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits>
 #include <vector>
 #include <algorithm>
 #include "Canvas.h"
@@ -23,7 +24,7 @@
 #endif
 
 // Windows doesn't support the C99 names for these
-#ifndef isnan
+#ifdef _MSC_VER
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #endif
@@ -33,6 +34,10 @@
 char* strndup( const char* s , size_t size );
 #endif
 
+#ifndef isnan
+#define isnan(x) std::isnan(x)
+#define isinf(x) std::isinf(x)
+#endif
 
 Persistent<FunctionTemplate> Context2d::constructor;
 
@@ -71,7 +76,7 @@ enum {
 
 void state_assign_fontFamily(canvas_state_t *state, const char *str) {
   free(state->fontFamily);
-  state->fontFamily = strdup(str);
+  state->fontFamily = strndup(str, 100);
 }
 
 
@@ -104,6 +109,7 @@ Context2d::Initialize(Handle<Object> target) {
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
   NODE_SET_PROTOTYPE_METHOD(ctor, "drawImage", DrawImage);
   NODE_SET_PROTOTYPE_METHOD(ctor, "putImageData", PutImageData);
+  NODE_SET_PROTOTYPE_METHOD(ctor, "getImageData", GetImageData);
   NODE_SET_PROTOTYPE_METHOD(ctor, "addPage", AddPage);
   NODE_SET_PROTOTYPE_METHOD(ctor, "save", Save);
   NODE_SET_PROTOTYPE_METHOD(ctor, "restore", Restore);
@@ -246,7 +252,7 @@ Context2d::saveState() {
   states[++stateno] = (canvas_state_t *) malloc(sizeof(canvas_state_t));
   memcpy(states[stateno], state, sizeof(canvas_state_t));
 #if HAVE_PANGO
-  states[stateno]->fontFamily = strdup(state->fontFamily);
+  states[stateno]->fontFamily = strndup(state->fontFamily, 100);
 #endif
   state = states[stateno];
 }
@@ -355,22 +361,68 @@ Context2d::shadow(void (fn)(cairo_t *cr)) {
   cairo_path_t *path = cairo_copy_path_flat(_context);
   cairo_save(_context);
 
-  // Offset
-  cairo_translate(
-      _context
-    , state->shadowOffsetX
-    , state->shadowOffsetY);
+  // shadowOffset is unaffected by current transform
+  cairo_matrix_t path_matrix;
+  cairo_get_matrix(_context, &path_matrix);
+  cairo_identity_matrix(_context);
 
   // Apply shadow
   cairo_push_group(_context);
-  cairo_new_path(_context);
-  cairo_append_path(_context, path);
-  setSourceRGBA(state->shadow);
-  fn(_context);
 
   // No need to invoke blur if shadowBlur is 0
   if (state->shadowBlur) {
-    blur(cairo_get_group_target(_context), state->shadowBlur);
+    // find out extent of path
+    double x1, y1, x2, y2;
+    if (fn == cairo_fill || fn == cairo_fill_preserve) {
+      cairo_fill_extents(_context, &x1, &y1, &x2, &y2);
+    } else {
+      cairo_stroke_extents(_context, &x1, &y1, &x2, &y2);
+    }
+
+    // create new image surface that size + padding for blurring
+    double dx = x2-x1, dy = y2-y1;
+    cairo_user_to_device_distance(_context, &dx, &dy);
+    int pad = state->shadowBlur * 2;
+    cairo_surface_t *surface = cairo_get_group_target(_context);
+    cairo_surface_t *shadow_surface = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32,
+      dx + 2 * pad,
+      dy + 2 * pad);
+    cairo_t *shadow_context = cairo_create(shadow_surface);
+
+    // transform path to the right place
+    cairo_translate(shadow_context, pad-x1, pad-y1);
+    cairo_transform(shadow_context, &path_matrix);
+
+    // draw the path and blur
+    cairo_set_line_width(shadow_context, cairo_get_line_width(_context));
+    cairo_new_path(shadow_context);
+    cairo_append_path(shadow_context, path);
+    setSourceRGBA(shadow_context, state->shadow);
+    fn(shadow_context);
+    blur(shadow_surface, state->shadowBlur);
+
+    // paint to original context
+    cairo_set_source_surface(_context, shadow_surface,
+      x1 - pad + state->shadowOffsetX + 1,
+      y1 - pad + state->shadowOffsetY + 1);
+    cairo_paint(_context);
+    cairo_destroy(shadow_context);
+    cairo_surface_destroy(shadow_surface);
+  } else {
+    // Offset first, then apply path's transform
+    cairo_translate(
+        _context
+      , state->shadowOffsetX
+      , state->shadowOffsetY);
+    cairo_transform(_context, &path_matrix);
+
+    // Apply shadow
+    cairo_new_path(_context);
+    cairo_append_path(_context, path);
+    setSourceRGBA(state->shadow);
+
+    fn(_context);
   }
 
   // Paint the shadow
@@ -387,13 +439,22 @@ Context2d::shadow(void (fn)(cairo_t *cr)) {
 }
 
 /*
- * Set source RGBA.
+ * Set source RGBA for the current context
  */
 
 void
 Context2d::setSourceRGBA(rgba_t color) {
+  setSourceRGBA(_context, color);
+}
+
+/*
+ * Set source RGBA
+ */
+
+void
+Context2d::setSourceRGBA(cairo_t *ctx, rgba_t color) {
   cairo_set_source_rgba(
-      _context
+      ctx
     , color.r
     , color.g
     , color.b
@@ -418,12 +479,13 @@ void
 Context2d::blur(cairo_surface_t *surface, int radius) {
   // Steve Hanov, 2009
   // Released into the public domain.
-  --radius;
+  radius = radius * 0.57735f + 0.5f;
   // get width, height
   int width = cairo_image_surface_get_width( surface );
   int height = cairo_image_surface_get_height( surface );
   unsigned* precalc =
       (unsigned*)malloc(width*height*sizeof(unsigned));
+  cairo_surface_flush( surface );
   unsigned char* src = cairo_image_surface_get_data( surface );
   double mul=1.f/((radius*2)*(radius*2));
   int channel;
@@ -471,6 +533,7 @@ Context2d::blur(cairo_surface_t *surface, int radius) {
       }
   }
 
+  cairo_surface_mark_dirty(surface);
   free(precalc);
 }
 
@@ -520,12 +583,11 @@ NAN_METHOD(Context2d::PutImageData) {
 
   Context2d *context = ObjectWrap::Unwrap<Context2d>(args.This());
   ImageData *imageData = ObjectWrap::Unwrap<ImageData>(obj);
-  PixelArray *arr = imageData->pixelArray();
 
-  uint8_t *src = arr->data();
+  uint8_t *src = imageData->data();
   uint8_t *dst = context->canvas()->data();
 
-  int srcStride = arr->stride()
+  int srcStride = imageData->stride()
     , dstStride = context->canvas()->stride();
 
   int sx = 0
@@ -540,8 +602,8 @@ NAN_METHOD(Context2d::PutImageData) {
   switch (args.Length()) {
     // imageData, dx, dy
     case 3:
-      cols = std::min(arr->width(), context->canvas()->width - dx);
-      rows = std::min(arr->height(), context->canvas()->height - dy);
+      cols = std::min(imageData->width(), context->canvas()->width - dx);
+      rows = std::min(imageData->height(), context->canvas()->height - dy);
       break;
     // imageData, dx, dy, sx, sy, sw, sh
     case 7:
@@ -549,12 +611,22 @@ NAN_METHOD(Context2d::PutImageData) {
       sy = args[4]->Int32Value();
       sw = args[5]->Int32Value();
       sh = args[6]->Int32Value();
+      // fix up negative height, width
+      if (sw < 0) sx += sw, sw = -sw;
+      if (sh < 0) sy += sh, sh = -sh;
+      // clamp the left edge
       if (sx < 0) sw += sx, sx = 0;
       if (sy < 0) sh += sy, sy = 0;
-      if (sx + sw > arr->width()) sw = arr->width() - sx;
-      if (sy + sh > arr->height()) sh = arr->height() - sy;
+      // clamp the right edge
+      if (sx + sw > imageData->width()) sw = imageData->width() - sx;
+      if (sy + sh > imageData->height()) sh = imageData->height() - sy;
+      // start destination at source offset
       dx += sx;
       dy += sy;
+      // chop off outlying source data
+      if (dx < 0) sw += dx, sx -= dx, dx = 0;
+      if (dy < 0) sh += dy, sy -= dy, dy = 0;
+      // clamp width at canvas size
       cols = std::min(sw, context->canvas()->width - dx);
       rows = std::min(sh, context->canvas()->height - dy);
       break;
@@ -564,27 +636,41 @@ NAN_METHOD(Context2d::PutImageData) {
 
   if (cols <= 0 || rows <= 0) NanReturnUndefined();
 
-  uint8_t *srcRows = src + sy * srcStride + sx * 4;
+  src += sy * srcStride + sx * 4;
+  dst += dstStride * dy + 4 * dx;
   for (int y = 0; y < rows; ++y) {
-    uint32_t *row = (uint32_t *)(dst + dstStride * (y + dy));
+    uint8_t *dstRow = dst;
+    uint8_t *srcRow = src;
     for (int x = 0; x < cols; ++x) {
-      int bx = x * 4;
-      uint32_t *pixel = row + x + dx;
+      // rgba
+      uint8_t r = *srcRow++;
+      uint8_t g = *srcRow++;
+      uint8_t b = *srcRow++;
+      uint8_t a = *srcRow++;
 
-      // RGBA
-      uint8_t a = srcRows[bx + 3];
-      uint8_t r = srcRows[bx + 0];
-      uint8_t g = srcRows[bx + 1];
-      uint8_t b = srcRows[bx + 2];
-      float alpha = (float) a / 255;
-
-      // ARGB
-      *pixel = a << 24
-        | (int)((float) r * alpha) << 16
-        | (int)((float) g * alpha) << 8
-        | (int)((float) b * alpha);
+      // argb
+      // performance optimization: fully transparent/opaque pixels can be
+      // processed more efficiently.
+      if (a == 0) {
+        *dstRow++ = 0;
+        *dstRow++ = 0;
+        *dstRow++ = 0;
+        *dstRow++ = 0;
+      } else if (a == 255) {
+        *dstRow++ = b;
+        *dstRow++ = g;
+        *dstRow++ = r;
+        *dstRow++ = a;
+      } else {
+        float alpha = (float)a / 255;
+        *dstRow++ = b * alpha;
+        *dstRow++ = g * alpha;
+        *dstRow++ = r * alpha;
+        *dstRow++ = a;
+      }
     }
-    srcRows += srcStride;
+    dst += dstStride;
+    src += srcStride;
   }
 
   cairo_surface_mark_dirty_rectangle(
@@ -595,6 +681,121 @@ NAN_METHOD(Context2d::PutImageData) {
     , rows);
 
   NanReturnUndefined();
+}
+
+/*
+ * Get image data.
+ *
+ *  - sx, sy, sw, sh
+ *
+ */
+
+NAN_METHOD(Context2d::GetImageData) {
+  NanScope();
+
+  Context2d *context = ObjectWrap::Unwrap<Context2d>(args.This());
+  Canvas *canvas = context->canvas();
+
+  int sx = args[0]->Int32Value();
+  int sy = args[1]->Int32Value();
+  int sw = args[2]->Int32Value();
+  int sh = args[3]->Int32Value();
+
+  if (!sw)
+    return NanThrowError("IndexSizeError: The source width is 0.");
+  if (!sh)
+    return NanThrowError("IndexSizeError: The source height is 0.");
+
+  // WebKit and Firefox have this behavior:
+  // Flip the coordinates so the origin is top/left-most:
+  if (sw < 0) {
+    sx += sw;
+    sw = -sw;
+  }
+  if (sh < 0) {
+    sy += sh;
+    sh = -sh;
+  }
+
+  if (sx + sw > canvas->width) sw = canvas->width - sx;
+  if (sy + sh > canvas->height) sh = canvas->height - sy;
+
+  // WebKit/moz functionality. node-canvas used to return in either case.
+  if (sw <= 0) sw = 1;
+  if (sh <= 0) sh = 1;
+
+  // Non-compliant. "Pixels outside the canvas must be returned as transparent
+  // black." This instead clips the returned array to the canvas area.
+  if (sx < 0) {
+    sw += sx;
+    sx = 0;
+  }
+  if (sy < 0) {
+    sh += sy;
+    sy = 0;
+  }
+
+  int size = sw * sh * 4;
+
+  int srcStride = canvas->stride();
+  int dstStride = sw * 4;
+
+  uint8_t *src = canvas->data();
+  uint8_t *dst = (uint8_t *)calloc(1, size);
+  NanAdjustExternalMemory(size);
+
+#if NODE_MAJOR_VERSION == 0 && NODE_MINOR_VERSION <= 10
+  Local<Object> global = Context::GetCurrent()->Global();
+
+  Handle<Value> bufargv[] = { NanNew(size) };
+  Local<Object> buffer = global->Get(NanNew("ArrayBuffer")).As<Function>()->NewInstance(1, bufargv);
+
+  Handle<Value> caargv[] = { buffer, NanNew(0), NanNew(size) };
+  Local<Object> clampedArray = global->Get(NanNew("Uint8ClampedArray")).As<Function>()->NewInstance(3, caargv);
+
+  clampedArray->SetIndexedPropertiesToExternalArrayData(dst, kExternalPixelArray, size);
+#else
+  Local<ArrayBuffer> buffer = ArrayBuffer::New(Isolate::GetCurrent(), size);
+  Local<Uint8ClampedArray> clampedArray = Uint8ClampedArray::New(buffer, 0, size);
+  clampedArray->SetIndexedPropertiesToExternalArrayData(dst, kExternalUint8ClampedArray, size);
+#endif
+
+  // Normalize data (argb -> rgba)
+  for (int y = 0; y < sh; ++y) {
+    uint32_t *row = (uint32_t *)(src + srcStride * (y + sy));
+    for (int x = 0; x < sw; ++x) {
+      int bx = x * 4;
+      uint32_t *pixel = row + x + sx;
+      uint8_t a = *pixel >> 24;
+      uint8_t r = *pixel >> 16;
+      uint8_t g = *pixel >> 8;
+      uint8_t b = *pixel;
+      dst[bx + 3] = a;
+
+      // Performance optimization: fully transparent/opaque pixels can be
+      // processed more efficiently.
+      if (a == 0 || a == 255) {
+        dst[bx + 0] = r;
+        dst[bx + 1] = g;
+        dst[bx + 2] = b;
+      } else {
+        float alpha = (float)a / 255;
+        dst[bx + 0] = (int)((float)r / alpha);
+        dst[bx + 1] = (int)((float)g / alpha);
+        dst[bx + 2] = (int)((float)b / alpha);
+      }
+
+    }
+    dst += dstStride;
+  }
+
+  const int argc = 3;
+  Local<Value> argv[argc] = { clampedArray, NanNew(sw), NanNew(sh) };
+
+  Local<FunctionTemplate> cons = NanNew(ImageData::constructor);
+  Local<Object> instance = cons->GetFunction()->NewInstance(argc, argv);
+
+  NanReturnValue(instance);
 }
 
 /*
@@ -681,11 +882,6 @@ NAN_METHOD(Context2d::DrawImage) {
   // Start draw
   cairo_save(ctx);
 
-  context->savePath();
-  cairo_rectangle(ctx, dx, dy, dw, dh);
-  cairo_clip(ctx);
-  context->restorePath();
-
   // Scale src
   if (dw != sw || dh != sh) {
     float fx = (float) dw / sw;
@@ -693,7 +889,21 @@ NAN_METHOD(Context2d::DrawImage) {
     cairo_scale(ctx, fx, fy);
     dx /= fx;
     dy /= fy;
+    dw /= fx;
+    dh /= fy;
   }
+
+  if (context->hasShadow()) {
+    context->setSourceRGBA(context->state->shadow);
+    cairo_mask_surface(ctx, surface,
+      dx - sx + context->state->shadowOffsetX,
+      dy - sy + context->state->shadowOffsetY);
+  }
+
+  context->savePath();
+  cairo_rectangle(ctx, dx, dy, dw, dh);
+  cairo_clip(ctx);
+  context->restorePath();
 
   // Paint
   cairo_set_source_surface(ctx, surface, dx - sx, dy - sy);
@@ -1103,7 +1313,7 @@ NAN_GETTER(Context2d::GetLineWidth) {
 
 NAN_SETTER(Context2d::SetLineWidth) {
   double n = value->NumberValue();
-  if (n > 0) {
+  if (n > 0 && n != std::numeric_limits<double>::infinity()) {
     Context2d *context = ObjectWrap::Unwrap<Context2d>(args.This());
     cairo_set_line_width(context->context(), n);
   }

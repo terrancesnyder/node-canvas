@@ -8,7 +8,7 @@ node-canvas
 
 ## Authors
 
-  - TJ Holowaychuk ([visionmedia](http://github.com/visionmedia))
+  - TJ Holowaychuk ([tj](http://github.com/tj))
   - Nathan Rajlich ([TooTallNate](http://github.com/TooTallNate))
   - Rod Vagg ([rvagg](http://github.com/rvagg))
   - Juriy Zaytsev ([kangax](http://github.com/kangax))
@@ -42,7 +42,7 @@ sudo port install pkgconfig libpng giflib freetype libpixman cairo
 ```javascript
 var Canvas = require('canvas')
   , Image = Canvas.Image
-  , canvas = new Canvas(200,200)
+  , canvas = new Canvas(200, 200)
   , ctx = canvas.getContext('2d');
 
 ctx.font = '30px Impact';
@@ -286,6 +286,10 @@ If you have not previously, init git submodules:
 
     $ git submodule update --init
 
+Install the node modules:
+
+    $ npm install
+
 Build node-canvas:
 
     $ node-gyp rebuild
@@ -307,25 +311,6 @@ Tested with and designed for:
 
 For node 0.2.x `node-canvas` <= 0.4.3 may be used,
 0.5.0 and above are designed for node 0.4.x only.
-
-## Windows Build
-
-- Extract GTK to C:\GTK
-- Extract FreeType to C:\freetype
-- Extract libjpeg-turn to C:\libjpeg-turbo
-- Install CMake 3.3.2
-- npm install -g node-gyp
-
-### Build FreeType
-
-    > cd C:\freetype
-    > cmake . -G "Visual Studio 7"
-    > open VS solution
-    > change build to "release"
-    > build
-    > rename C:\freetype-2.6\release to C:\freetype-2.6\lib
-    > rename C:\freetype-2.6\include\freetype2 to C:\freetype-2.6\include\freetype
-    > renamce C:\GTK\include\freetype2 to C:\GTK\include\freetype
 
 ## License
 
