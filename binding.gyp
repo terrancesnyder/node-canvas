@@ -65,7 +65,6 @@
 			      'src/unistd'
           ],
           'defines': [
-            'snprintf=_snprintf',
             '_USE_MATH_DEFINES'
           ],
           'configurations': {
